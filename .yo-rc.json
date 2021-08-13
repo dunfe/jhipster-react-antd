@@ -1,0 +1,10 @@
+{
+  "generator-jhipster-blueprint": {
+    "promptValues": {
+      "githubName": "dungreact",
+      "authorName": "Dung Nguyen",
+      "authorEmail": "dungreact@gmail.com",
+      "authorUrl": "dungnq.net"
+    }
+  }
+}
