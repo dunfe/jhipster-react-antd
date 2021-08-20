@@ -192,22 +192,13 @@ _%>
     if (!isNew) {
       form.setFieldsValue({
           ...<%= entityInstance %>Entity,
-          <%_ if (field.fieldName == 'createAt') { _%>
-              <%= field.fieldName %>: dayjs(<%= entityInstance %>Entity.<%= field.fieldName %>),
-          <%_ } _%>
-          <%_ if (field.fieldName == 'modifiedAt') { _%>
-              <%= field.fieldName %>: dayjs(<%= entityInstance %>Entity.<%= field.fieldName %>),
-          <%_ } _%>
-          <%_ if (field.fieldName == 'lastModifiedAt') { _%>
-              <%= field.fieldName %>: dayjs(<%= entityInstance %>Entity.<%= field.fieldName %>),
-          <%_ } _%>
 <%_ for (field of fields.filter(field => !field.id)) {
     const fieldType = field.fieldType;
     const fieldName = field.fieldName;
     const fieldNameHumanized = field.fieldNameHumanized;
 
     if (field.fieldTypeTimed) { _%>
-          <%= fieldName %>: convertDateTimeFromServer(<%= entityInstance %>Entity.<%= fieldName %>),
+          <%= fieldName %>: <%= entityInstance %>Entity.<%= field.fieldName %> ? dayjs(<%= entityInstance %>Entity.<%= field.fieldName %>) : dayjs(),
   <%_ } else if (field.fieldIsEnum) {
       const enumValues = field.enumValues;
   _%>
@@ -230,7 +221,7 @@ _%>
 
   return (
     <Card>
-        <h2 id="<%= i18nKeyPrefix %>.home.createOrEditLabel" data-cy="<%= entityClass %>CreateUpdateHeading">
+        <h2 id="<%= i18nKeyPrefix %>.home.createOrEditLabel">
           <Translate contentKey="<%= i18nKeyPrefix %>.home.createOrEditLabel">Create or edit a <%= entityClass %></Translate>
         </h2>
         { loading ? <p>Loading...</p> :
@@ -241,6 +232,7 @@ _%>
               id="<%= entityFileName %>-<%= primaryKey.fields[0].fieldName %>"
               label={translate('<%= primaryKey.fields[0].fieldTranslationKey %>')}
               rules={[{ required: true }]}
+              disable="true"
             >
               <Input />
             </Form.Item>
@@ -263,25 +255,24 @@ _%>
   <%_ } _%>
             id="<%= entityFileName %>-<%= fieldName %>"
             name="<%= fieldName %>"
-            data-cy="<%= fieldName %>"
             rules={[
               <%_ if (field.fieldValidationRequired && !field.fieldTypeBoolean) { _%>
                   {required: true, message: translate('entity.validation.required')},
               <%_ } _%>
     <%_ if (field.fieldValidationMinLength) { _%>
-            {min: field.fieldValidateRulesMinlength, message: translate('entity.validation.minlength', { min: ' + field.fieldValidateRulesMinlength + ' })},
+            {min: <%= field.fieldValidateRulesMinlength %>, message: translate('entity.validation.minlength', { min: ' + field.fieldValidateRulesMinlength + ' })},
         <%_ } _%>
         <%_  if (field.fieldValidationMaxLength) { _%>
-                {max: field.fieldValidateRulesMaxlength, message: translate('entity.validation.maxlength', { max: ' + field.fieldValidateRulesMaxlength + ' }) },
+                {max: <%= field.fieldValidateRulesMaxlength %>, message: translate('entity.validation.maxlength', { max: ' + field.fieldValidateRulesMaxlength + ' }) },
             <%_ } _%>
             <%_  if (field.fieldValidationMin) { _%>
-                {min: field.fieldValidateRulesMin, message: translate('entity.validation.min', { min: ' + field.fieldValidateRulesMin + ' }) },
+                {min: <%= field.fieldValidateRulesMin %>, message: translate('entity.validation.min', { min: ' + field.fieldValidateRulesMin + ' }) },
             <%_ } _%>
             <%_  if (field.fieldValidationMax) { _%>
-                {max: field.fieldValidateRulesMax, message: translate('entity.validation.max', { max: ' + field.fieldValidateRulesMax + ' }) },
+                {max: <%= field.fieldValidateRulesMax %>, message: translate('entity.validation.max', { max: ' + field.fieldValidateRulesMax + ' }) },
             <%_ } _%>
             <%_  if (field.fieldValidationPattern) { _%>
-                {pattern: new RegExp(field.fieldValidateRulesPatternReact), message: translate('entity.validation.pattern')},
+                {pattern: new RegExp(/<%= field.fieldValidateRulesPatternReact %>/), message: translate('entity.validation.pattern')},
             <%_ } _%>
             <%_  if (field.fieldTypeNumeric) { _%>
                 {pattern: new RegExp('^[0-9]*$'), message: translate('entity.validation.number')},
@@ -348,7 +339,6 @@ _%>
           <Form.Item
             id="<%= entityFileName %>-<%= relationshipName %>"
             name="<%= relationshipFieldName %>Id"
-            data-cy="<%= relationshipFieldName %>"
       <%_ if (enableTranslation) { _%>
             label={translate('<%= translationKey %>')}
       <%_ } else { _%>
@@ -356,16 +346,13 @@ _%>
       <%_ } _%>
             rules={[
               <%_ if (relationshipRequired) { _%>
-                    {required: true}
-              <%_ } _%>
-              <%_ if (relationshipRequired) { _%>
                 {required: true,
                 message: <Translate contentKey="entity.validation.required">This field is required.</Translate> }
               <%_ } _%>
             ]}
             >
 
-            <Select>
+            <Select showSearch filterOption={(input, option) => option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0}>
               <%_ if (rel.relationshipManyToOne || (rel.relationshipOneToOne && ownerSide)) { _%>
                   {<%= otherEntityNamePlural %>.map(otherEntity => {
                     return <Select.Option key={otherEntity.<%= otherEntityPkName %>} value={otherEntity.<%= otherEntityPkName %>}>{otherEntity.<%= otherEntityField %>}</Select.Option>
@@ -381,10 +368,9 @@ _%>
             label="<%= relationshipNameHumanized %>"
         <%_ } _%>
             id="<%= entityFileName %>-<%= relationshipName %>"
-            data-cy="<%= relationshipFieldName %>"
             name="<%= relationshipFieldNamePlural %>"
             >
-              <Select
+              <Select showSearch filterOption={(input, option) => option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0}
                 mode="multiple"
                 allowClear
                 style={{ width: '100%' }}
@@ -409,12 +395,11 @@ _%>
               <Translate contentKey="entity.action.back">Back</Translate>
             </Link>
           </Button>
-          <Button type="primary" id="save-entity" data-cy="entityCreateSaveButton" onClick={onFinish}>
+          <Button type="primary" id="save-entity" onClick={onFinish}>
             <Translate contentKey="entity.action.save">Save</Translate>
           </Button>
     </Space>
   </Form.Item>
-
         </Form>
         }
   </Card>
